@@ -63,7 +63,6 @@ void setup()
 void loop()
 {
   loops++;
-  float dist, dist_sum = 0.0;
   float cmMsec;
   long microsec = 0;
   int sensorValue = 0;
@@ -82,7 +81,7 @@ void loop()
     // Se não abrir, imprima um erro:
     Serial.print("Erro abrindo o arquivo após ");
     Serial.print(loops);
-    Serial.print(" loops");
+    .print(" loops");
     return;
   }
    
