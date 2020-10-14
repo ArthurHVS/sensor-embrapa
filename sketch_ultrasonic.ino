@@ -1,10 +1,9 @@
-
 // Bibliotecas incluídas
 #include <SPI.h>
 #include <SD.h>
 #include <Wire.h>
-#include <Ultrasonic.h>
 #include <RTClib.h>
+#include <SoftwareSerial.h>
 
 // Definições do relógio ds1307, para adquirirmos dados com estampas de tempo reais
 #define DS1307_I2C_ADDRESS 0x68
@@ -22,13 +21,13 @@ File myFile;
 #define TAM_CICLO 5
 
 // Variáveis globais utilizadas pelo sensor, relógio do shield SD e para controlar a impressão na tela, respectivamente
-Ultrasonic ultrasonic(pino_trigger, pino_echo);
 RTC_Millis rtc;
 int loops = 0;
 
 // Variáveis globais para formatação dos números "float" para o arquivo.
 char floatStr[9];
 char dataStr[24];
+
 
 // Funções de conversão decimal -> binário (codificado) e binário (codificado) -> decimal.
 byte decToBcd(byte val)
@@ -40,23 +39,6 @@ byte bcdToDec(byte val)
 {
   return ( (val/16*10) + (val%16) );
 }
-
-// Função de conversão float para uma string terminada em null
-char *ftoa(char *a, double f, int precision)
-{
-  long p[] = {0,10,100,1000,10000,100000,1000000,10000000,100000000};
-  
-  char *ret = a;
-  long heiltal = (long)f;
-  itoa(heiltal, a, 10);
-  while (*a != '\0') a++;
-  *a++ = '.';
-  long decimal = abs((long)((f - heiltal) * p[precision]));
-  itoa(decimal, a, 10);
-  return ret;
-}
-
-
 
 void setup()
 {
@@ -74,8 +56,7 @@ void setup()
       Serial.print("Cartão SD não inciou!");
       return;
     } 
-  Serial.println("Inicialização completa.");
-  floatStr[0] = '\0';   
+  Serial.println("Inicialização completa."); 
   analogReference(INTERNAL);
 }
  
@@ -85,7 +66,7 @@ void loop()
   float dist, dist_sum = 0.0;
   float cmMsec;
   long microsec = 0;
-  
+  int sensorValue = 0;
   DateTime agora = rtc.now();
   
   // Abre o arquivo csv. Note que só um arquivo pode ser aberto por vez, então precisamos fechá-lo toda vez que o loop for feito
@@ -94,7 +75,7 @@ void loop()
   // Se o arquivo abriu, escreva nele!:
   if (myFile && loops <= 1) 
   {
-    Serial.println(F("Arquivo aberto para escrita."));
+    //Serial.println(F("Arquivo aberto para escrita."));
    } 
   if (!myFile)
   {
@@ -104,19 +85,13 @@ void loop()
     Serial.print(" loops");
     return;
   }
-  
-  for(int i=0; i< TAM_CICLO; i++)
-  {
-    microsec = ultrasonic.timing();
-    cmMsec = ultrasonic.convert(microsec, Ultrasonic::CM);  
+   
+  // Lê o valor do sensor em A1
+  sensorValue = analogRead(A1);
+  // Imprime o valor que foi lido:
+  Serial.println(sensorValue);
+  delay(10);        // Delay entre leituras, para estabilidade (10 ms)
 
-    dist_sum += cmMsec;
-
-    delay(1000);
-  }
-  
-  dist = dist_sum / TAM_CICLO;
-  dist_sum = 0.0;
 
   // Imprime a data/hora no arquivo
   dataStr[0] = '\0';
@@ -124,14 +99,14 @@ void loop()
   sprintf(dataStr, "%d/%d/%d, %d:%d:%d, ", agora.day(), agora.month(), agora.year(), agora.hour(), agora.minute(), agora.second());
 
   myFile.print(dataStr);
-  Serial.print(dataStr);
+  //Serial.print(dataStr);
 
-  // Imprime a distância no arquivo.
-  dataStr[0] = '\0';
-  sprintf(dataStr, "%s", ftoa(floatStr, dist, 3));
-  
+  // Imprime a pressao na string.
+  sprintf(dataStr, "%d" , sensorValue);
+
+  //Imprime a string no arquivo.
   myFile.println(dataStr);
-  Serial.println(dataStr);
+  //Serial.println(dataStr);
 
   // Fecha o arquivo e finaliza o loop
   myFile.close();
